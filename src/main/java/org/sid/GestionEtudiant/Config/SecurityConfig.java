@@ -1,41 +1,71 @@
 package org.sid.GestionEtudiant.Config;
 
+import java.util.Collections;
+
+import org.sid.GestionEtudiant.Entites.Utilisateur;
+import org.sid.GestionEtudiant.Service.UtilisateurService;
+import org.sid.GestionEtudiant.Service.Impl.DetailsUtilisateurServiceImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.builders.WebSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.annotation.web.config.WebSecurityConfigurerAdapter;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig extends WebSecurityConfigurerAdapter {
 
-    @Autowired
-    private AuthenticationProvider utilisateurDetailsService;
-    
-   
-   
-    @Override
-	protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+    private final DetailsUtilisateurServiceImpl userDetailsService;
 
-		auth.authenticationProvider(utilisateurDetailsService).authenticationProvider(utilisateurDetailsService);
-	}
-
-
-   
+    public SecurityConfig(DetailsUtilisateurServiceImpl userDetailsService) {
+        this.userDetailsService = userDetailsService;
+    }
 
     @Override
     protected void configure(HttpSecurity http) throws Exception {
+        http.csrf().disable()
+            .authorizeRequests()
+                .requestMatchers("/public/**",  "/change-password").permitAll() // Autoriser l'accès à ces pages sans authentification
+                .anyRequest().authenticated()
+            .and()
+            .formLogin()
+                .loginPage("/login")
+                .defaultSuccessUrl("/dashboard") // Redirection après une connexion réussie
+                .permitAll()
+            .and()
+            .logout()
+                .logoutSuccessUrl("/login") // Redirection après une déconnexion réussie
+                .permitAll();
     }
+
+    // Ajoutez votre gestionnaire d'authentification et encodeur ici
+
+    @Override
+    public void configure(WebSecurity web) throws Exception {
+        web.ignoring().requestMatchers("/resources/**", "/static/**", "/css/**", "/js/**", "/images/**");
+    }
+
+
+ // SecurityConfig.java
+    @Override
+    protected void configure(AuthenticationManagerBuilder auth) throws Exception {
+        auth.userDetailsService(userDetailsService)
+            .passwordEncoder(passwordEncoder());
+      
+
+         }
+
+    
 
 
     @Bean
-    public BCryptPasswordEncoder passwordEncoder() {
+    public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 }
+
+
